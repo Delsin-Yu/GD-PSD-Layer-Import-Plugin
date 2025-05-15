@@ -61,7 +61,6 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			if save_error != OK:
 				printerr("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
-		print(gen_files);
 		return OK;
 
 
