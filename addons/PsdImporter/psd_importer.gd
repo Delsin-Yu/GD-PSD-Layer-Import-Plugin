@@ -43,24 +43,24 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
 	elif img_data_array.size() == 1:
-		var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + ".png";
-		var save_error := img_data_array[0].image.save_png(filename);
+		var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + ".tres";
+		var compressed := PortableCompressedTexture2D.new();
+		compressed.create_from_image(img_data_array[0].image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS);
+		var save_error := ResourceSaver.save(compressed, filename);
 		if save_error != OK:
 			printerr("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
-		append_import_external_resource(filename);
-		gen_files.append(filename);
 		return OK;
 	else:
 		var layer_index = 0;
 		for image in img_data_array:
-			var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + "." + image.name + ".png";
-			var save_error := image.image.save_png(filename);
+			var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + "." + image.name + ".tres";
+			var compressed := PortableCompressedTexture2D.new();
+			compressed.create_from_image(image.image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS);
+			var save_error := ResourceSaver.save(compressed, filename);
 			if save_error != OK:
 				printerr("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
-			append_import_external_resource(filename);
-			gen_files.append(filename);
 		print(gen_files);
 		return OK;
 

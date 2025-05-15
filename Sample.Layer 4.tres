@@ -1,0 +1,5 @@
+[gd_resource type="PortableCompressedTexture2D" format=4 uid="uid://fs40tpsjuu4m"]
+
+[resource]
+_data = PackedByteArray("AAADAAUAAAABAAAAcQAAAFkAAADSAAAAUklGRsoAAABXRUJQVlA4TL4AAAAvcAAWECcgECCEqfH/YEMgQAhT4/+BQIAQpsb/AwFBkf+jxQ9YBVQNx4kkOdIpBwrKgh4Pdh24hvbfqREsXav3E9H/CXgt+o+Mv8cIABHUElBzAchQBzLYHowmw/ZABuOeiT3KRDqih2zoRjp2ohN5IMNORDAZ2p6PLY+eZyHkRtNgYdeBbxDWjBsUXMgztKnT5ICHgsfw+mGr4goiAN+YIDxEFjzVTv252DR/JYqZTRtj9eEpZjZtzFxsmjUA")
+size_override = Vector2(113, 89)
