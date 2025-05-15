@@ -12,10 +12,10 @@ func _get_recognized_extensions() -> PackedStringArray:
 	return ["psd"];
 
 func _get_save_extension() -> String:
-	return "";
+	return "tres";
 
 func _get_resource_type() -> String:
-	return "";
+	return "PhotoshopDocument";
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	return true;
@@ -40,6 +40,8 @@ func _get_priority() -> float:
 func _import(source_file: String, save_path: String, options: Dictionary, platform_variants: Array[String], gen_files: Array[String]) -> Error:
 	var merge_layers := options["merge_layers"] as bool;
 	var img_data_array := self.read_psd_file(source_file, merge_layers);
+	var true_save_path := save_path + "." + _get_save_extension();
+	var fs := EditorInterface.get_resource_filesystem();
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
 	elif img_data_array.size() == 1:
@@ -50,9 +52,14 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 		if save_error != OK:
 			printerr("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
+		gen_files.append(filename);
+		var document := PhotoshopDocument.new();
+		document.layers.append(compressed);
+		ResourceSaver.save(document, true_save_path);
 		return OK;
 	else:
 		var layer_index = 0;
+		var document := PhotoshopDocument.new();
 		for image in img_data_array:
 			var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + "." + image.name + ".tres";
 			var compressed := PortableCompressedTexture2D.new();
@@ -61,6 +68,9 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			if save_error != OK:
 				printerr("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
+			gen_files.append(filename);
+			document.layers.append(compressed);
+		ResourceSaver.save(document, true_save_path);
 		return OK;
 
 
