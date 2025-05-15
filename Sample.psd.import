@@ -1,0 +1,15 @@
+[remap]
+
+importer="psd_layers_importer"
+uid="uid://bg8io2s122vos"
+
+[deps]
+
+files=["res://Sample.Layer 0.png", "res://Sample.Layer 1.png", "res://Sample.Layer 2.png", "res://Sample.Layer 3.png", "res://Sample.Layer 4.png", "res://Sample.Layer 5.png", "res://Sample.Layer 6.png", "res://Sample.Layer 7.png"]
+
+source_file="res://Sample.psd"
+dest_files=["res://Sample.Layer 0.png", "res://Sample.Layer 1.png", "res://Sample.Layer 2.png", "res://Sample.Layer 3.png", "res://Sample.Layer 4.png", "res://Sample.Layer 5.png", "res://Sample.Layer 6.png", "res://Sample.Layer 7.png"]
+
+[params]
+
+merge_layers=false
