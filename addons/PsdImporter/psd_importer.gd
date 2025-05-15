@@ -12,10 +12,10 @@ func _get_recognized_extensions() -> PackedStringArray:
 	return ["psd"];
 
 func _get_save_extension() -> String:
-	return "tres";
+	return "";
 
 func _get_resource_type() -> String:
-	return "PhotoshopDocument";
+	return "";
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	return true;
@@ -53,13 +53,9 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			printerr("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
 		gen_files.append(filename);
-		var document := PhotoshopDocument.new();
-		document.layers.append(compressed);
-		ResourceSaver.save(document, true_save_path);
 		return OK;
 	else:
 		var layer_index = 0;
-		var document := PhotoshopDocument.new();
 		for image in img_data_array:
 			var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + "." + image.name + ".tres";
 			var compressed := PortableCompressedTexture2D.new();
@@ -69,8 +65,6 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 				printerr("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
 			gen_files.append(filename);
-			document.layers.append(compressed);
-		ResourceSaver.save(document, true_save_path);
 		return OK;
 
 
