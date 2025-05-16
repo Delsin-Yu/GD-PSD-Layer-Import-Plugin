@@ -18,3 +18,4 @@ import_mode=0
 layer_name_encoding=1
 layer_trim_enabled=false
 layer_resource_naming="<file>-<layer>"
+old_resource_handling=1

@@ -20,9 +20,8 @@ func _get_resource_type() -> String:
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	match option_name:
 		"import_mode": return true;
-		"layer_name_encoding": return options["import_mode"] == Mode.ByLayer;
-		"layer_trim_enabled": return options["import_mode"] == Mode.ByLayer;
-		"layer_resource_naming": return options["import_mode"] == Mode.ByLayer;
+		"old_resource_handling": return true;
+		_: return options["import_mode"] == Mode.ByLayer;
 	return true;
 
 func _get_preset_count() -> int:
@@ -42,6 +41,11 @@ enum Mode {
 enum LayerNameEncoding {
 	Utf8,
 	GBK,
+}
+
+enum OldResourceHandling {
+	Unlink,
+	Delete,
 }
 
 func _get_import_options(path, preset_index) -> Array[Dictionary]:
@@ -65,7 +69,13 @@ func _get_import_options(path, preset_index) -> Array[Dictionary]:
 		{
 			"name": "layer_resource_naming",
 			"default_value": "<file>-<layer>"
-		}
+		},
+		{
+			"name": "old_resource_handling",
+			"default_value": OldResourceHandling.Unlink,
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": _get_enum_selections(OldResourceHandling),
+		},
 	];
 
 static func _get_enum_selections(dict : Dictionary) -> String:
@@ -84,6 +94,7 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 	var layer_name_encoding := options["layer_name_encoding"] as LayerNameEncoding;
 	var trim_layer := options["layer_trim_enabled"] as bool;
 	var template := options["layer_resource_naming"] as String;
+	var old_resource_handling := options["old_resource_handling"] as OldResourceHandling;
 	var match_template = _substitute_name(template, "FileName", "LayerName");
 	if !match_template.is_valid_filename():
 		push_error("\"%s\" is not a valid filename" % match_template);
@@ -100,7 +111,10 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 	else:
 		resource = ResourceLoader.load(resource_save_path) as PhotoshopDocument;
 	
+	var old_resources := resource.layers.duplicate() as Array[PortableCompressedTexture2D];
 	resource.layers.clear();
+	
+	var editor_fs := EditorInterface.get_resource_filesystem();
 	
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
@@ -112,10 +126,12 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 		if save_error != OK:
 			push_error("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
+		compressed = ResourceLoader.load(filename) as PortableCompressedTexture2D;
 		gen_files.append(filename);
 		resource.layers.append(compressed);
-		ResourceSaver.save(resource, resource_save_path);
-		return OK;
+		var found := old_resources.find(compressed);
+		if found != -1:
+			old_resources.remove_at(found);
 	else:
 		for image_data in img_data_array:
 			var filename := _substitute_name(template, source_file_name, image_data.name) + ".tres";
@@ -130,10 +146,40 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			if save_error != OK:
 				push_error("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
+			compressed = ResourceLoader.load(filename) as PortableCompressedTexture2D;
 			gen_files.append(filename);
 			resource.layers.append(compressed);
-		ResourceSaver.save(resource, resource_save_path);
-		return OK;
+			var found := old_resources.find(compressed);
+			if found == -1: continue;
+			old_resources.remove_at(found);
+			
+	var main_res_save_error := ResourceSaver.save(resource, resource_save_path);
+	if main_res_save_error != OK:
+		push_error("Unable to save %s: %s" % [resource_save_path, main_res_save_error]);
+		return main_res_save_error;
+	
+	if old_resources.size() > 0:
+		var message_template : String;
+		var delete_old := old_resource_handling == OldResourceHandling.Delete;
+		if delete_old:
+			print("The following resources are no longer a part of the PSD file and has been deleted after the PSD update:")
+		else:
+			print("The following resources are no longer a part of the PSD file after the PSD update:");
+		for old_resource in old_resources:
+			# TODO: Find all instances that reference this old_resource and log it to the developer
+			if delete_old:
+				var remove_result := OS.move_to_trash(ProjectSettings.globalize_path(old_resource.resource_path));
+				if remove_result != OK:
+					push_error("Unable to delete the resource %s: %s" % [old_resource.resource_path, remove_result]);
+				else:
+					editor_fs.update_file(old_resource.resource_path);
+					# TODO: Clickable Link
+					print("  - " + old_resource.resource_path);
+			else:
+				# TODO: Clickable Link
+				print("  - " + old_resource.resource_path);
+	
+	return OK;
 
 
 
@@ -215,7 +261,6 @@ static func read_psd_file(path: String, merged: bool, layer_name_encoding: Layer
 		return [];
 	var color_mode : ColorMode = color_mode_value;
 	
-	
 	var color_data_length := reader.get_u32();
 	match color_mode:
 		ColorMode.Indexed:
@@ -266,7 +311,7 @@ static func read_psd_file(path: String, merged: bool, layer_name_encoding: Layer
 		var layer_texture : Array[ImageData];
 		
 		for layer_record in layer_records:
-			print("Importing Layer %s..." % layer_record.layer_name);
+			print("  - Importing Layer '%s'..." % layer_record.layer_name);
 			var layer_width := layer_record.right - layer_record.left;
 			var layer_height := layer_record.bottom - layer_record.top;
 			var image := _read_layer_image(
