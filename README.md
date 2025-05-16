@@ -1,6 +1,8 @@
 
 ***[English](#godot-photoshop-document-layer-import-plugin) | [简体中文](#用于-godot-的-photoshop-文档图层导入插件)***
 
+[![GitHub Release](https://img.shields.io/github/v/release/Delsin-Yu/GD-PSD-Layer-Import-Plugin)](https://github.com/Delsin-Yu/GD-PSD-Layer-Import-Plugin/releases/latest) [![Stars](https://img.shields.io/github/stars/Delsin-Yu/GD-PSD-Layer-Import-Plugin?color=brightgreen)](https://github.com/Delsin-Yu/GD-PSD-Layer-Import-Plugin/stargazers) [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/Delsin-Yu/GD-PSD-Layer-Import-Plugin/blob/main/LICENSE)
+
 ## Godot Photoshop Document Layer Import Plugin
 
 A Godot 4.4+ plugin for importing Photoshop Document (PSD) layers into Godot, fully implmented in GDScript.
@@ -14,7 +16,7 @@ A Godot 4.4+ plugin for importing Photoshop Document (PSD) layers into Godot, fu
 
 ### Installation
 
-1. Download the plugin from the [Releases Page](TBD).
+1. Download the plugin from the [Releases Page](https://github.com/Delsin-Yu/GD-PSD-Layer-Import-Plugin/releases/latest).
 2. Extract the `PSDImporter` directory into your Godot project directory under `res://addons`.
 3. Enable the plugin in the Godot editor by going to `Project` -> `Project Settings` -> `Plugins` and enabling the `PSD Importer` plugin.
 
@@ -66,7 +68,7 @@ Godot 4.4+ 的 Photoshop 文档（PSD）图层导入插件，完全使用 GDScri
 
 ### 安装
 
-1. 从 [Releases 页面](TBD) 下载插件。
+1. 从 [Releases 页面](https://github.com/Delsin-Yu/GD-PSD-Layer-Import-Plugin/releases/latest) 下载插件。
 2. 将 `PSDImporter` 目录解压到你的 Godot 项目目录下的 `res://addons` 目录中。
 3. 在 Godot 编辑器中，进入 `项目` -> `项目设置` -> `插件`，启用 `PSD Importer` 插件。
 
