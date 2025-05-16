@@ -126,6 +126,7 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 		if save_error != OK:
 			push_error("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
+		_update_uid(filename);
 		compressed = ResourceLoader.load(filename) as PortableCompressedTexture2D;
 		gen_files.append(filename);
 		resource.layers.append(compressed);
@@ -146,6 +147,7 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			if save_error != OK:
 				push_error("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
+			_update_uid(filename);
 			compressed = ResourceLoader.load(filename) as PortableCompressedTexture2D;
 			gen_files.append(filename);
 			resource.layers.append(compressed);
@@ -190,6 +192,10 @@ static func _create_or_get_texture(filename: String) -> PortableCompressedTextur
 	if !FileAccess.file_exists(filename):
 		return PortableCompressedTexture2D.new();
 	return ResourceLoader.load(filename) as PortableCompressedTexture2D;
+
+static func _update_uid(filename: String) -> void:
+	# TODO: Uid consistency, use ResourceSaver.set_uid when Godot 4.5
+	pass;
 
 enum ColorMode
 {
