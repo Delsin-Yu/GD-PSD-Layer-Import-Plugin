@@ -5,11 +5,14 @@ uid="uid://bg8io2s122vos"
 
 [deps]
 
-files=["res://Sample.Layer 0.tres", "res://Sample.Layer 1.tres", "res://Sample.Layer 2.tres", "res://Sample.Layer 3.tres", "res://Sample.Layer 4.tres", "res://Sample.Layer 5.tres", "res://Sample.Layer 6.tres", "res://Sample.Layer 7.tres"]
+files=["res://Sample-Layer 0.tres", "res://Sample-Layer 1.tres", "res://Sample-Layer 2.tres", "res://Sample-Layer 3.tres", "res://Sample-Layer 4.tres", "res://Sample-Layer 5.tres", "res://Sample-Layer 6.tres", "res://Sample-Layer 7.tres"]
 
 source_file="res://Sample.psd"
-dest_files=["res://Sample.Layer 0.tres", "res://Sample.Layer 1.tres", "res://Sample.Layer 2.tres", "res://Sample.Layer 3.tres", "res://Sample.Layer 4.tres", "res://Sample.Layer 5.tres", "res://Sample.Layer 6.tres", "res://Sample.Layer 7.tres"]
+dest_files=["res://Sample-Layer 0.tres", "res://Sample-Layer 1.tres", "res://Sample-Layer 2.tres", "res://Sample-Layer 3.tres", "res://Sample-Layer 4.tres", "res://Sample-Layer 5.tres", "res://Sample-Layer 6.tres", "res://Sample-Layer 7.tres"]
 
 [params]
 
-merge_layers=false
+import_mode=0
+layer_name_encoding=1
+layer_trim_enabled=false
+layer_resource_naming="<file>-<layer>"

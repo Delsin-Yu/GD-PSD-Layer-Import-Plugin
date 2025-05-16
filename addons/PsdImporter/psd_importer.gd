@@ -18,6 +18,11 @@ func _get_resource_type() -> String:
 	return "";
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
+	match option_name:
+		"import_mode": return true;
+		"layer_name_encoding": return options["import_mode"] == Mode.ByLayer;
+		"layer_trim_enabled": return options["import_mode"] == Mode.ByLayer;
+		"layer_resource_naming": return options["import_mode"] == Mode.ByLayer;
 	return true;
 
 func _get_preset_count() -> int:
@@ -29,44 +34,103 @@ func _get_import_order() -> int:
 func _get_preset_name(preset_index) -> String:
 	return "";
 
+enum Mode {
+	ByLayer,
+	Merged,
+}
+
+enum LayerNameEncoding {
+	Utf8,
+	GBK,
+}
+
 func _get_import_options(path, preset_index) -> Array[Dictionary]:
 	return [
-		{ "name": "merge_layers", "default_value": false }
+		{
+			"name": "import_mode",
+			"default_value": Mode.ByLayer,
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": _get_enum_selections(Mode),
+		},
+		{
+			"name": "layer_name_encoding",
+			"default_value": LayerNameEncoding.GBK,
+			"property_hint": PROPERTY_HINT_ENUM,
+			"hint_string": _get_enum_selections(LayerNameEncoding),
+		},
+		{
+			"name": "layer_trim_enabled",
+			"default_value": false,
+		},
+		{
+			"name": "layer_resource_naming",
+			"default_value": "<file>-<layer>"
+		}
 	];
+
+static func _get_enum_selections(dict : Dictionary) -> String:
+	var str : String;
+	for value in dict.values():
+		if str != "":
+			str += ",";
+		str += dict.keys()[value] + ":" + str(value);
+	return str;
 
 func _get_priority() -> float:
 	return 1.0;
 
 func _import(source_file: String, save_path: String, options: Dictionary, platform_variants: Array[String], gen_files: Array[String]) -> Error:
-	var merge_layers := options["merge_layers"] as bool;
-	var img_data_array := self.read_psd_file(source_file, merge_layers);
+	var merge_layers := (options["import_mode"] as Mode) == Mode.Merged;
+	var layer_name_encoding := options["layer_name_encoding"] as LayerNameEncoding;
+	var trim_layer := options["layer_trim_enabled"] as bool;
+	var template := options["layer_resource_naming"] as String;
+	var match_template = _substitute_name(template, "FileName", "LayerName");
+	if !match_template.is_valid_filename():
+		push_error("\"%s\" is not a valid filename" % match_template);
+		return ERR_INVALID_PARAMETER;
+	var img_data_array := self.read_psd_file(source_file, merge_layers, layer_name_encoding, trim_layer);
 	var true_save_path := save_path + "." + _get_save_extension();
 	var fs := EditorInterface.get_resource_filesystem();
+	var source_file_name := source_file.get_basename().get_file();
+	var base_name := source_file.get_base_dir().path_join(source_file_name);
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
 	elif img_data_array.size() == 1:
-		var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + ".tres";
-		var compressed := PortableCompressedTexture2D.new();
+		var filename := base_name + ".tres";
+		var compressed := _create_or_get_texture(filename);
 		compressed.create_from_image(img_data_array[0].image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS);
 		var save_error := ResourceSaver.save(compressed, filename);
 		if save_error != OK:
-			printerr("Unable to save %s: %s" % [filename, save_error]);
+			push_error("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
 		gen_files.append(filename);
 		return OK;
 	else:
-		var layer_index = 0;
-		for image in img_data_array:
-			var filename := source_file.get_base_dir().path_join(source_file.get_basename().get_file()) + "." + image.name + ".tres";
-			var compressed := PortableCompressedTexture2D.new();
-			compressed.create_from_image(image.image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS);
+		for image_data in img_data_array:
+			var filename := _substitute_name(template, source_file_name, image_data.name) + ".tres";
+			if !filename.is_valid_filename():
+				push_error("\"%s\" is not a valid filename" % filename);
+				return ERR_CANT_CREATE;
+		for image_data in img_data_array:
+			var filename := _substitute_name(template, base_name, image_data.name) + ".tres";
+			var compressed := _create_or_get_texture(filename);
+			compressed.create_from_image(image_data.image, PortableCompressedTexture2D.COMPRESSION_MODE_LOSSLESS);
 			var save_error := ResourceSaver.save(compressed, filename);
 			if save_error != OK:
-				printerr("Unable to save %s: %s" % [filename, save_error]);
+				push_error("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
 			gen_files.append(filename);
 		return OK;
 
+
+
+static func _substitute_name(template: String, filename: String, layername: String) -> String:
+	return template.replace("<file>", filename).replace("<layer>", layername);
+
+static func _create_or_get_texture(filename: String) -> PortableCompressedTexture2D:
+	if !FileAccess.file_exists(filename):
+		return PortableCompressedTexture2D.new();
+	return ResourceLoader.load(filename) as PortableCompressedTexture2D;
 
 enum ColorMode
 {
@@ -89,12 +153,12 @@ enum CompressionMethod
 }
 
 # https://www.adobe.com/devnet-apps/photoshop/fileformatashtml/#50577409_19840
-static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
+static func read_psd_file(path: String, merged: bool, layer_name_encoding: LayerNameEncoding, trim_layer: bool) -> Array[ImageData]:
 	var psd_file := FileAccess.open(path, FileAccess.READ);
 	print("Start Importing PSD Document (%s)" % path);
 	
 	if !psd_file: 
-		printerr("Access Error: %s" % FileAccess.get_open_error());
+		push_error("Access Error: %s" % FileAccess.get_open_error());
 		return [];
 	
 	var reader := BigEndieanReader.new(psd_file);
@@ -104,37 +168,37 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 	
 	var version := reader.get_u16();
 	if version != 1:
-		printerr("PSD Format Error: %s != 1" % version);
+		push_error("PSD Format Error: %s != 1" % version);
 		return [];
 	
 	var reserved_bytes := psd_file.get_buffer(6);
 	if reserved_bytes != PackedByteArray([0,0,0,0,0,0]):
-		printerr("Reserved Segment Error: %s != [0,0,0,0,0,0]" % reserved_bytes);
+		push_error("Reserved Segment Error: %s != [0,0,0,0,0,0]" % reserved_bytes);
 		return [];
 	
 	var channels := reader.get_u16();
 	if channels < 1 || channels > 56:
-		printerr("Channel Count Error: %s != 1 ~ 56" % channels);
+		push_error("Channel Count Error: %s != 1 ~ 56" % channels);
 		return [];
 	
-	var height := reader.get_u32();
-	if height < 1 || height > 30000:
-		printerr("Image Height Error: %s != 1 ~ 30000" % height);
+	var document_height := reader.get_u32();
+	if document_height < 1 || document_height > 30000:
+		push_error("Image Height Error: %s != 1 ~ 30000" % document_height);
 		return [];
 	
-	var width := reader.get_u32();
-	if width < 1 || width > 30000:
-		printerr("Image Width Error: %s != 1 ~ 30000" % width);
+	var document_width := reader.get_u32();
+	if document_width < 1 || document_width > 30000:
+		push_error("Image Width Error: %s != 1 ~ 30000" % document_width);
 		return [];
 	
 	var channel_bit_depth := reader.get_u16();
 	if ![1,8,16,32].has(channel_bit_depth):
-		printerr("Channel Depth Error: %s != 1 | 8 | 16 | 32" % channel_bit_depth);
+		push_error("Channel Depth Error: %s != 1 | 8 | 16 | 32" % channel_bit_depth);
 		return [];
 
 	var color_mode_value := reader.get_u16();
 	if color_mode_value > 9:
-		printerr("Color Mode Error: %s > 9" % color_mode_value);
+		push_error("Color Mode Error: %s > 9" % color_mode_value);
 		return [];
 	var color_mode : ColorMode = color_mode_value;
 	
@@ -143,7 +207,7 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 	match color_mode:
 		ColorMode.Indexed:
 			if color_data_length != 768:
-				printerr("Index Color Mode Data Error: %s != 768" % [color_data_length]);
+				push_error("Index Color Mode Data Error: %s != 768" % [color_data_length]);
 				return [];
 			reader.skip(768);
 			pass
@@ -152,7 +216,7 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 			pass
 		_:
 			if color_data_length != 0:
-				printerr("Color Mode Data Error: %s != 0 for %s" % [color_data_length, ColorMode.keys()[color_mode]]);
+				push_error("Color Mode Data Error: %s != 0 for %s" % [color_data_length, ColorMode.keys()[color_mode]]);
 				return [];
 			pass
 	
@@ -162,7 +226,7 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 	
 	var layer_and_mask_length := reader.get_u32();
 	
-	if !merged: # Analyze Layer Information and Export Image by
+	if !merged: # Analyze Layer Information and Export Images
 		if layer_and_mask_length == 0: return [];
 		
 		# Layer Info
@@ -181,7 +245,7 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 		# Layer records
 		for layer_index in range(layer_count):
 			var record := LayerRecord.new();
-			var result := record.parse_data(reader, layer_index);
+			var result := record.parse_data(reader, layer_index, layer_name_encoding);
 			if result != OK:
 				return [];
 			layer_records.append(record);
@@ -190,30 +254,36 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 		
 		for layer_record in layer_records:
 			print("Importing Layer %s..." % layer_record.layer_name);
-			var image = _read_layer_image(
-				layer_record.right - layer_record.left, 
-				layer_record.bottom - layer_record.top, 
+			var layer_width := layer_record.right - layer_record.left;
+			var layer_height := layer_record.bottom - layer_record.top;
+			var image := _read_layer_image(
+				layer_width, 
+				layer_height, 
 				reader,
 				layer_record.channel_info
 			);
 			if !image:
 				return [];
+			
+			if !trim_layer:
+				var channel_image := Image.create_empty(document_width, document_height, false, Image.FORMAT_RGBA8);
+				var layer_offset := Vector2i(layer_record.left, layer_record.top);
+				channel_image.blit_rect(image, Rect2i(0, 0, image.get_width(), image.get_height()), layer_offset);
+				image = channel_image;
+				
 			layer_texture.append(ImageData.new(image, layer_record.layer_name));
 		
 		return layer_texture;
-	else: # 解析并输出合并图信息（需要启动“最大化兼容性”）
+	else: # Parse the composite image data at the end of the file
 		reader.skip(layer_and_mask_length);
 		
-		# 图像数据部分
-		# 首先是所有红色数据，然后是所有绿色数据
-		# 长度:2 压缩方法：0 = 原始图像数据 1 = RLE 压缩图像数据 2 = 无预测的 ZIP 3 = 带预测的 ZIP
 		var compression_method_value := reader.get_u16();
 		if compression_method_value > 3:
-			printerr("压缩模式错误 (%s > 3)" % compression_method_value);
+			push_error("Incorrect compression mode: %s" % compression_method_value);
 			return [];
 		var compression_method : CompressionMethod = compression_method_value;
 		if compression_method == CompressionMethod.Zip || compression_method == CompressionMethod.ZipWithPrediction:
-			printerr("不支持此压缩模式(%s)" % compression_method);
+			push_error("Unsupported compression mode: %s" % CompressionMethod.keys()[compression_method]);
 		
 		var image_data_bytes := reader.get_rest();
 		
@@ -221,59 +291,75 @@ static func read_psd_file(path: String, merged: bool) -> Array[ImageData]:
 		
 		if compression_method == CompressionMethod.Raw:
 			var image_data : PackedByteArray;
-			var index := 0
+			var input_pos := 0;
 			
-			while index < width * height:
+			while input_pos < document_width * document_height:
 				for i in range(4):
-					var data_byte := image_data_bytes.decode_u8(index + width * height * i);
+					var data_byte := image_data_bytes.decode_u8(input_pos + document_width * document_height * i);
 					image_data.append(data_byte);
-				index += 1
+				input_pos += 1
 			
 			created_image = Image.create_from_data(
-				width,
-				height,
+				document_width,
+				document_height,
 				false,
 				Image.FORMAT_RGBA8,image_data
 			);
 		elif compression_method == CompressionMethod.RLE:
-			var sliced_image_data_bytes = image_data_bytes.slice(channels * 2 * height);
+			var input := image_data_bytes.slice(channels * 2 * document_height);
 			var decoded_data : PackedByteArray;
-			var index := 0
-			while index < sliced_image_data_bytes.size() - 1:
-				var data_byte := sliced_image_data_bytes.decode_u8(index);
-				if data_byte >= 0x80: # 该行有重复像素
-					index += 1
-					for i in range(256 - data_byte + 1):
-						decoded_data.append(sliced_image_data_bytes.decode_u8(index))
-				else: # 该行没有重复，按字节填充像素
-					for i in range(data_byte + 1):
-						index += 1;
-						decoded_data.append(sliced_image_data_bytes.decode_u8(index));
-				index += 1;
+			var input_pos := 0
+			while input_pos < input.size():
+				var header := input[input_pos];
+				if header > 127:
+					header -= 256; # Convert to signed 8-bit
+				input_pos += 1;
+				
+				if header == -128:
+					# Skip byte
+					continue;
+				elif header >= 0:
+					# Treat the following (header + 1) bytes as uncompressed data; copy as-is
+					for i in range(header + 1):
+						if input_pos >= input.size():
+							push_error("input terminated while decoding uncompressed segment in RLE slice")
+							return [];
+						decoded_data.append(input[input_pos]);
+						input_pos += 1;
+				else:
+					# Following byte is repeated (1 - header) times
+					if input_pos >= input.size():
+						push_error("input terminated while decoding repeat segment in RLE slice");
+						return [];
+					var repeat := input[input_pos];
+					input_pos += 1;
+					var count := 1 + (-header);
+					for i in range(count):
+						decoded_data.append(repeat);
 			var image_data : PackedByteArray;
-			index = 0
-			while index < width * height:
+			input_pos = 0;
+			while input_pos < document_width * document_height:
 				for i in range(channels):
-					image_data.append(decoded_data.decode_u8(index + width * height * i));
-				index += 1;
+					image_data.append(decoded_data[input_pos + document_width * document_height * i]);
+				input_pos += 1;
 			if channels == 3:
 				created_image = Image.create_from_data(
-					width,
-					height,
+					document_width,
+					document_height,
 					false,
 					Image.FORMAT_RGB8,
 					image_data
 				);
 			elif channels == 4:
 				created_image = Image.create_from_data(
-					width,
-					height,
+					document_width,
+					document_height,
 					false,
 					Image.FORMAT_RGBA8,
 					image_data
 				);
 			else:
-				printerr("不支持此数量的通道(%s != [3|4])" % channels);
+				push_error("不支持此数量的通道(%s != [3|4])" % channels);
 		psd_file.close()
 		if created_image: return [ImageData.new(created_image, "")];
 		return [];
@@ -301,10 +387,10 @@ static func _read_layer_image(width: int, height: int, reader: BigEndieanReader,
 					var scanlines : int;
 					match channel.kind:
 						LayerRecord.ChannelKind.UserSuppliedLayerMask:
-							printerr("Channel UserSuppliedLayerMask not supported");
+							push_error("Channel UserSuppliedLayerMask not supported");
 							return null;
 						LayerRecord.ChannelKind.RealUserSuppliedLayerMask:
-							printerr("Channel UserSuppliedLayerMask not supported");
+							push_error("Channel UserSuppliedLayerMask not supported");
 							return null;
 						_:
 							scanlines = height;
@@ -313,29 +399,29 @@ static func _read_layer_image(width: int, height: int, reader: BigEndieanReader,
 					pass
 				data = reader.get_buffer(rle_buffer_size);
 			CompressionMethod.Zip:
-				printerr("Zip image format not supported");
+				push_error("Zip image format not supported");
 				return null;
 			CompressionMethod.ZipWithPrediction:
-				printerr("Zip(with prediction) image format not supported");
+				push_error("Zip(with prediction) image format not supported");
 				return null;
 		var remainder := channel.data_length - reader.get_position() + start;
 		reader.skip(remainder);
 		result.get_or_add(channel.kind, ChannelData.new(compression, data));
 	
 	if !result.has(LayerRecord.ChannelKind.Red):
-		printerr("Red Channel not found for layer");
+		push_error("Red Channel not found for layer");
 		return null;
 	
 	if !result.has(LayerRecord.ChannelKind.Green):
-		printerr("Green Channel not found for layer");
+		push_error("Green Channel not found for layer");
 		return null;	
 		
 	if !result.has(LayerRecord.ChannelKind.Blue):
-		printerr("Blue Channel not found for layer");
+		push_error("Blue Channel not found for layer");
 		return null;
 		
 	if !result.has(LayerRecord.ChannelKind.TransparencyMask):
-		printerr("Alpha Channel not found for layer");
+		push_error("Alpha Channel not found for layer");
 		return null;
 	
 	var r_channel := result[LayerRecord.ChannelKind.Red];
@@ -361,7 +447,7 @@ static func _decode_channel(data: ChannelData, offset: int, buffer: ByRefByteArr
 		CompressionMethod.RLE:
 			return _decode_rle(data.data, offset, buffer);
 		_:
-			printerr("Unsupported Compression Format: %s" % CompressionMethod.keys()[data.compression]);
+			push_error("Unsupported Compression Format: %s" % CompressionMethod.keys()[data.compression]);
 			return false;
 
 const BYTES_PER_PIXEL := 4;
@@ -384,11 +470,11 @@ static func _decode_rle(input: PackedByteArray, channel_offset: int, output: ByR
 		var header := input[input_pos];
 		if header > 127:
 			header -= 256  # Convert to signed 8-bit
-		input_pos += 1
+		input_pos += 1;
 
 		if header == -128:
 			# Skip byte
-			continue
+			continue;
 		elif header >= 0:
 			# Treat the following (header + 1) bytes as uncompressed data; copy as-is
 			for i in range(header + 1):
@@ -455,7 +541,7 @@ class LayerRecord extends RefCounted:
 	func _to_string() -> String:
 		return "<%s: %s, %s, %s, %s, %s, %s, %s>" % [layer_name, [top, left, bottom, right], channel_count, channel_info, blend_mode, opacity, clipping_is_base, flags];
 	
-	func parse_data(file: BigEndieanReader, layer_index : int) -> Error:
+	func parse_data(file: BigEndieanReader, layer_index : int, layer_name_encoding: LayerNameEncoding) -> Error:
 		top = file.get_s32()
 		left = file.get_s32();
 		bottom = file.get_s32()
@@ -465,7 +551,7 @@ class LayerRecord extends RefCounted:
 		for channel_index in range(channel_count):
 			var channel_id := file.get_s16();
 			if channel_id < -3 || channel_id > 2:
-				printerr("ChannelKind Error in Layer#%s Channel#%s: %s < -3 || %s > 2" % [layer_index, channel_index, channel_id, channel_id]);
+				push_error("ChannelKind Error in Layer#%s Channel#%s: %s < -3 || %s > 2" % [layer_index, channel_index, channel_id, channel_id]);
 				return ERR_FILE_CORRUPT;
 			var channel_kind : LayerRecord.ChannelKind = channel_id;
 			var channel_data_length := file.get_u32();
@@ -477,17 +563,17 @@ class LayerRecord extends RefCounted:
 		var blend_mode_key := file.get_ascii(4);
 			
 		if blend_mode_key != "norm":
-			printerr("Unsupported Blend Mode in Layer#%s: %s != norm" % [layer_index, blend_mode_key]);
+			push_error("Unsupported Blend Mode in Layer#%s: %s != norm" % [layer_index, blend_mode_key]);
 			return ERR_FILE_CORRUPT;
 		# 0 == 0.0, 255 == 1.0
 		opacity = file.get_u8();
 		if opacity != 255:
-			printerr("Unsupported Opacity in Layer#%s: %s != 255" % [layer_index, opacity]);
+			push_error("Unsupported Opacity in Layer#%s: %s != 255" % [layer_index, opacity]);
 			return ERR_FILE_CORRUPT;
 		
 		clipping_is_base = file.get_u8() == 0;
 		if !clipping_is_base:
-			printerr("Unsupported Clipping in Layer#%s: %s != 0" % [layer_index, opacity]);
+			push_error("Unsupported Clipping in Layer#%s: %s != 0" % [layer_index, opacity]);
 			return ERR_FILE_CORRUPT;
 		
 		flags = file.get_u8();
@@ -499,7 +585,7 @@ class LayerRecord extends RefCounted:
 		
 		var layer_mask_length := file.get_u32();
 		if layer_mask_length != 0:
-			printerr("Layer Mask Not Supported in Layer#%s: %s != 0" % [layer_index, layer_mask_length]);
+			push_error("Layer Mask Not Supported in Layer#%s: %s != 0" % [layer_index, layer_mask_length]);
 			return ERR_FILE_CORRUPT;
 		
 		file.skip(layer_mask_length); # Effectively an NOP
@@ -513,7 +599,14 @@ class LayerRecord extends RefCounted:
 		var skipped_bytes := padded_length - name_length - 1;
 		file.skip(skipped_bytes);
 		
-		layer_name = GBKEncoding.get_string_from_gbk(name_bytes);
+		match layer_name_encoding:
+			LayerNameEncoding.Utf8:
+				layer_name = name_bytes.get_string_from_utf8();
+			LayerNameEncoding.GBK:
+				layer_name = GBKEncoding.get_string_from_gbk(name_bytes);
+			_:
+				push_error("Unsupported layer name encoding: %s" % layer_name_encoding);
+				return ERR_CANT_RESOLVE;
 		
 		var additional_info_length := extra_data_length - layer_mask_length - layer_blending_range_length - padded_length - 8;
 		file.skip(additional_info_length);
@@ -551,7 +644,7 @@ class BigEndieanReader extends RefCounted:
 		var buffer := get_ascii(header.length());
 		if buffer == header:
 			return true;
-		printerr("Header Mismatch at %s: %s != %s" % [source, buffer, header]);
+		push_error("Header Mismatch at %s: %s != %s" % [source, buffer, header]);
 		return false;
 	func get_ascii(length: int) -> String:
 		return _file.get_buffer(length).get_string_from_ascii();
@@ -598,7 +691,7 @@ class GBKEncoding:
 				var gbk_code_point = PackedByteArray([buffer[index], buffer[index + 1]]);
 				var unicode_code_point := gbk_to_unicode_map.get_or_add(gbk_code_point, null);
 				if !unicode_code_point:
-					printerr("%s is not a valid GBK code point!" % gbk_code_point);
+					push_error("%s is not a valid GBK code point!" % gbk_code_point);
 					unicode_sequence.append_array(("? %s ?" % gbk_code_point).to_utf16_buffer());
 					break;
 				unicode_sequence.append_array(unicode_code_point);
@@ -607,7 +700,7 @@ class GBKEncoding:
 		return unicode_sequence.get_string_from_utf16();
 	
 	static func _load_map() -> void:
-		var file := FileAccess.open("res://addons/PsdImporter/gbk_to_utf16.bytes", FileAccess.READ);
+		var file := FileAccess.open("res://addons/PSDImporter/gbk_to_utf16.bytes", FileAccess.READ);
 		while file.get_position() != file.get_length():
 			gbk_to_unicode_map.get_or_add(file.get_buffer(2), file.get_buffer(2));
 #endregion
