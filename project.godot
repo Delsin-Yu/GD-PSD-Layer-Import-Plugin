@@ -20,4 +20,4 @@ project/assembly_name="GDPSDLayerImportPlugin"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/PsdImporter/plugin.cfg")
+enabled=PackedStringArray("res://addons/PSDImporter/plugin.cfg", "res://addons/PsdImporter/plugin.cfg")

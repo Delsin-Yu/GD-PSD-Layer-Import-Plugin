@@ -1,14 +1,16 @@
 [remap]
 
 importer="psd_layers_importer"
+type="PhotoshopDocument"
 uid="uid://bg8io2s122vos"
+path="res://.godot/imported/Sample.psd-fe86a0b4c488de82d1630430e46f5cd3.tres"
 
 [deps]
 
 files=["res://Sample-Layer 0.tres", "res://Sample-Layer 1.tres", "res://Sample-Layer 2.tres", "res://Sample-Layer 3.tres", "res://Sample-Layer 4.tres", "res://Sample-Layer 5.tres", "res://Sample-Layer 6.tres", "res://Sample-Layer 7.tres"]
 
 source_file="res://Sample.psd"
-dest_files=["res://Sample-Layer 0.tres", "res://Sample-Layer 1.tres", "res://Sample-Layer 2.tres", "res://Sample-Layer 3.tres", "res://Sample-Layer 4.tres", "res://Sample-Layer 5.tres", "res://Sample-Layer 6.tres", "res://Sample-Layer 7.tres"]
+dest_files=["res://.godot/imported/Sample.psd-fe86a0b4c488de82d1630430e46f5cd3.tres", "res://Sample-Layer 0.tres", "res://Sample-Layer 1.tres", "res://Sample-Layer 2.tres", "res://Sample-Layer 3.tres", "res://Sample-Layer 4.tres", "res://Sample-Layer 5.tres", "res://Sample-Layer 6.tres", "res://Sample-Layer 7.tres"]
 
 [params]
 

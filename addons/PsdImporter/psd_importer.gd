@@ -12,10 +12,10 @@ func _get_recognized_extensions() -> PackedStringArray:
 	return ["psd"];
 
 func _get_save_extension() -> String:
-	return "";
+	return "tres";
 
 func _get_resource_type() -> String:
-	return "";
+	return "PhotoshopDocument";
 
 func _get_option_visibility(path: String, option_name: StringName, options: Dictionary) -> bool:
 	match option_name:
@@ -90,9 +90,18 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 		return ERR_INVALID_PARAMETER;
 	var img_data_array := self.read_psd_file(source_file, merge_layers, layer_name_encoding, trim_layer);
 	var true_save_path := save_path + "." + _get_save_extension();
-	var fs := EditorInterface.get_resource_filesystem();
 	var source_file_name := source_file.get_basename().get_file();
 	var base_name := source_file.get_base_dir().path_join(source_file_name);
+	
+	var resource : PhotoshopDocument;
+	var resource_save_path := save_path + "." + _get_save_extension();
+	if !FileAccess.file_exists(resource_save_path):
+		resource = PhotoshopDocument.new();
+	else:
+		resource = ResourceLoader.load(resource_save_path) as PhotoshopDocument;
+	
+	resource.layers.clear();
+	
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
 	elif img_data_array.size() == 1:
@@ -104,6 +113,8 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 			push_error("Unable to save %s: %s" % [filename, save_error]);
 			return save_error;
 		gen_files.append(filename);
+		resource.layers.append(compressed);
+		ResourceSaver.save(resource, resource_save_path);
 		return OK;
 	else:
 		for image_data in img_data_array:
@@ -120,6 +131,8 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 				push_error("Unable to save %s: %s" % [filename, save_error]);
 				return save_error;
 			gen_files.append(filename);
+			resource.layers.append(compressed);
+		ResourceSaver.save(resource, resource_save_path);
 		return OK;
 
 
