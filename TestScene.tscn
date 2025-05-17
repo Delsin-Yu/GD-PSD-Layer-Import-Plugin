@@ -1,13 +1,13 @@
 [gd_scene load_steps=9 format=3 uid="uid://dywqjcf1yged2"]
 
-[ext_resource type="Texture2D" uid="uid://c86tjs688n2vl" path="res://Sample-Layer 0.tres" id="1_rj586"]
-[ext_resource type="Texture2D" uid="uid://d0m0xj2nx8yre" path="res://Sample-Layer 1.tres" id="2_4d7sh"]
-[ext_resource type="Texture2D" uid="uid://cgtt7twet7me5" path="res://Sample-Layer 2.tres" id="3_ir8iy"]
-[ext_resource type="Texture2D" uid="uid://1m56kx5pgkwl" path="res://Sample-Layer 3.tres" id="4_hqns4"]
-[ext_resource type="Texture2D" uid="uid://bnuiyhwgjcle5" path="res://Sample-Layer 4.tres" id="5_x0ka3"]
-[ext_resource type="Texture2D" uid="uid://pi7auwxg65na" path="res://Sample-Layer 5.tres" id="6_0h7mo"]
-[ext_resource type="Texture2D" uid="uid://dewv0lbayu815" path="res://Sample-Layer 6.tres" id="7_nr8wp"]
-[ext_resource type="Texture2D" uid="uid://deq63fr1g81jy" path="res://Sample-Layer 7.tres" id="8_d2bti"]
+[ext_resource type="Texture2D" uid="uid://p4ceo8ru2yvg" path="res://Sample-Layer 0.tres" id="1_rj586"]
+[ext_resource type="Texture2D" uid="uid://byk3ti8wmcuvf" path="res://Sample-Layer 1.tres" id="2_4d7sh"]
+[ext_resource type="Texture2D" uid="uid://cw23k3ubievfu" path="res://Sample-Layer 2.tres" id="3_ir8iy"]
+[ext_resource type="Texture2D" uid="uid://1ohd2tw7f4mr" path="res://Sample-Layer 3.tres" id="4_hqns4"]
+[ext_resource type="Texture2D" uid="uid://8wbro7ufxs5h" path="res://Sample-Layer 4.tres" id="5_x0ka3"]
+[ext_resource type="Texture2D" uid="uid://bmomq65jofuxv" path="res://Sample-Layer 5.tres" id="6_0h7mo"]
+[ext_resource type="Texture2D" uid="uid://r58b80nxv8cy" path="res://Sample-Layer 6.tres" id="7_nr8wp"]
+[ext_resource type="Texture2D" uid="uid://s6ey64ir0hll" path="res://Sample-Layer 7.tres" id="8_d2bti"]
 
 [node name="Node2D" type="Node2D"]
 
