@@ -76,6 +76,10 @@ func _get_import_options(path, preset_index) -> Array[Dictionary]:
 			"property_hint": PROPERTY_HINT_ENUM,
 			"hint_string": _get_enum_selections(OldResourceHandling),
 		},
+		{
+			"name": "perform_ownership_analysis",
+			"default_value": false,
+		}
 	];
 
 static func _get_enum_selections(dict : Dictionary) -> String:
@@ -93,6 +97,7 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 	var merge_layers := (options["import_mode"] as Mode) == Mode.Merged;
 	var layer_name_encoding := options["layer_name_encoding"] as LayerNameEncoding;
 	var trim_layer := options["layer_trim_enabled"] as bool;
+	var perform_ownership_analysis := options["perform_ownership_analysis"] as bool;
 	var template := options["layer_resource_naming"] as String;
 	var old_resource_handling := options["old_resource_handling"] as OldResourceHandling;
 	var match_template = _substitute_name(template, "FileName", "LayerName");
@@ -114,7 +119,6 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 	var old_resources := resource.layers.duplicate() as Array[PortableCompressedTexture2D];
 	resource.layers.clear();
 	
-	var editor_fs := EditorInterface.get_resource_filesystem();
 	
 	if img_data_array.size() == 0:
 		return ERR_FILE_CORRUPT;
@@ -160,30 +164,62 @@ func _import(source_file: String, save_path: String, options: Dictionary, platfo
 		push_error("Unable to save %s: %s" % [resource_save_path, main_res_save_error]);
 		return main_res_save_error;
 	
+	var editor_fs := EditorInterface.get_resource_filesystem();
+	
+	var project_resources_owner_map : Dictionary[String, Array];
+	if perform_ownership_analysis:
+		_build_project_resources_owner_map(editor_fs.get_filesystem(), project_resources_owner_map);
+	
 	if old_resources.size() > 0:
+		
 		var message_template : String;
 		var delete_old := old_resource_handling == OldResourceHandling.Delete;
+		var color := "";
 		if delete_old:
-			print("The following resources are no longer a part of the PSD file and has been deleted after the PSD update:")
+			print_rich("[color=tomato]The following resources are no longer a part of the origianl file and has been deleted after the PSD update:")
+			color = "[color=light_salmon]";
 		else:
-			print("The following resources are no longer a part of the PSD file after the PSD update:");
+			print_rich("[color=yellow]The following resources are no longer a part of the origianl file after the PSD update:");
+			color = "[color=gold]";
+		
 		for old_resource in old_resources:
-			# TODO: Find all instances that reference this old_resource and log it to the developer
+			var resource_path := old_resource.resource_path;
 			if delete_old:
-				var remove_result := OS.move_to_trash(ProjectSettings.globalize_path(old_resource.resource_path));
+				var remove_result := OS.move_to_trash(ProjectSettings.globalize_path(resource_path));
 				if remove_result != OK:
-					push_error("Unable to delete the resource %s: %s" % [old_resource.resource_path, remove_result]);
+					push_error("Unable to delete the resource %s: %s" % [resource_path, remove_result]);
 				else:
-					editor_fs.update_file(old_resource.resource_path);
-					# TODO: Clickable Link
-					print("  - " + old_resource.resource_path);
+					editor_fs.update_file(resource_path);
+					print_rich("%s  x %s" % [color, resource_path]);
 			else:
-				# TODO: Clickable Link
-				print("  - " + old_resource.resource_path);
-	
+				print_rich("%s  ⇏ %s" % [color, resource_path]);
+			if !project_resources_owner_map.has(resource_path): continue;
+			for owner in (project_resources_owner_map[resource_path] as Array[String]):
+				if owner == source_file: continue;
+				print_rich("%s      ↳ %s is affected" % [color, owner])
+			
+	print_rich("[color=cyan]The following resources have changed after the PSD update:");
+	for updated in resource.layers:
+		var resource_path := updated.resource_path;
+		print_rich("[color=light_cyan]  ↺ %s" % resource_path);
+		if !project_resources_owner_map.has(resource_path): continue;
+		for owner in (project_resources_owner_map[resource_path] as Array[String]):
+			if owner == source_file: continue;
+			print_rich("[color=light_cyan]      ↳ %s is affected" % owner)
+		
 	return OK;
 
-
+static func _build_project_resources_owner_map(efsd: EditorFileSystemDirectory, map: Dictionary[String, Array]):
+	if !efsd: return;
+	for i in efsd.get_subdir_count():
+		_build_project_resources_owner_map(efsd.get_subdir(i), map);
+	
+	for i in efsd.get_file_count():
+		var path := efsd.get_file_path(i);
+		if !ResourceLoader.exists(path): continue;
+		var dependencies := ResourceLoader.get_dependencies(path);
+		for dependency in dependencies:
+			(map.get_or_add(dependency.get_slice("::", 2), []) as Array[String]).append(path);
 
 static func _substitute_name(template: String, filename: String, layername: String) -> String:
 	return template.replace("<file>", filename).replace("<layer>", layername);

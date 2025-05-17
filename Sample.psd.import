@@ -19,3 +19,4 @@ layer_name_encoding=1
 layer_trim_enabled=false
 layer_resource_naming="<file>-<layer>"
 old_resource_handling=1
+perform_ownership_analysis=true

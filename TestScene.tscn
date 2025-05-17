@@ -1,0 +1,44 @@
+[gd_scene load_steps=9 format=3 uid="uid://dywqjcf1yged2"]
+
+[ext_resource type="Texture2D" uid="uid://c86tjs688n2vl" path="res://Sample-Layer 0.tres" id="1_rj586"]
+[ext_resource type="Texture2D" uid="uid://d0m0xj2nx8yre" path="res://Sample-Layer 1.tres" id="2_4d7sh"]
+[ext_resource type="Texture2D" uid="uid://cgtt7twet7me5" path="res://Sample-Layer 2.tres" id="3_ir8iy"]
+[ext_resource type="Texture2D" uid="uid://1m56kx5pgkwl" path="res://Sample-Layer 3.tres" id="4_hqns4"]
+[ext_resource type="Texture2D" uid="uid://bnuiyhwgjcle5" path="res://Sample-Layer 4.tres" id="5_x0ka3"]
+[ext_resource type="Texture2D" uid="uid://pi7auwxg65na" path="res://Sample-Layer 5.tres" id="6_0h7mo"]
+[ext_resource type="Texture2D" uid="uid://dewv0lbayu815" path="res://Sample-Layer 6.tres" id="7_nr8wp"]
+[ext_resource type="Texture2D" uid="uid://deq63fr1g81jy" path="res://Sample-Layer 7.tres" id="8_d2bti"]
+
+[node name="Node2D" type="Node2D"]
+
+[node name="Sample-layer0" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("1_rj586")
+
+[node name="Sample-layer1" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("2_4d7sh")
+
+[node name="Sample-layer2" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("3_ir8iy")
+
+[node name="Sample-layer3" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("4_hqns4")
+
+[node name="Sample-layer4" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("5_x0ka3")
+
+[node name="Sample-layer5" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("6_0h7mo")
+
+[node name="Sample-layer6" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("7_nr8wp")
+
+[node name="Sample-layer7" type="Sprite2D" parent="."]
+position = Vector2(942, 225)
+texture = ExtResource("8_d2bti")
