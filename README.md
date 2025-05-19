@@ -12,7 +12,9 @@ A Godot 4.4+ plugin for importing Photoshop Document (PSD) layers into Godot, fu
 - Import PSD files as one single merged texture, or texture set for each layer.
 - Alternative layer name encodings: GBK or UTF-8.
 - Trimming of transparent pixels per layer.
-- Configurable texture namming.
+- Configurable texture naming.
+- Automatic resource update or deletion when the PSD file is modified.
+- Support for ownership analysis of generated texture resources upon reimporting the PSD file, providing information about affected resources and scenes.
 
 ### Installation
 
@@ -33,6 +35,10 @@ A Godot 4.4+ plugin for importing Photoshop Document (PSD) layers into Godot, fu
      - `<file>` - The name of the PSD file without the extension.
      - `<layer>` - The name of the layer.
      - Example: If the PSD file is named `example.psd` and the layer is named `Layer1`, using the naming format `<file>-<layer>` will result in a texture named `example-Layer1.tres`.
+   - **Old Resource Handling** (Available when `Import Mode` is `ByLayer`): Defines how to handle the generated resources that are nolonger a part of the PSD file after the PSD file is modified and reimported. The options are:
+     - `Unlink` - Unlink the resources from the PSD file, but keep them in the project, all existing reference to the resources will be intact.
+     - `Delete` - Delete the resources from the project, all existing reference to the resources will be invalidated.
+   - **Perform Ownership Analysis** (Available when `Import Mode` is `ByLayer`): Enable this option to perform ownership analysis upon reimporting the PSD file. This will check for all the generated resources that are modified or removed, and print useful information in the output panel. This is useful for understanding the which part of the project is affected by the PSD file modification, at the cost of extra computation time.
 5. Click the `Reimport` button to apply the import settings.
 6. The imported textures will be available in the FileSystem panel under the same directory as the PSD file.
 
@@ -65,6 +71,8 @@ Godot 4.4+ 的 Photoshop 文档（PSD）图层导入插件，完全使用 GDScri
 - 支持图层名称编码选择：GBK 或 UTF-8。
 - 支持按图层裁剪透明像素。
 - 支持自定义纹理命名格式。
+- 支持 PSD 文件修改后自动更新或删除生成的资源。
+- 支持重新导入 PSD 文件时分析生成的纹理资源的引用关系并告知受到影响的资源及场景。
 
 ### 安装
 
@@ -85,6 +93,10 @@ Godot 4.4+ 的 Photoshop 文档（PSD）图层导入插件，完全使用 GDScri
      - `<file>` - PSD 文件名（不含扩展名）
      - `<layer>` - 图层名称
      - 例如：如果 PSD 文件名为 `example.psd`，图层名为 `Layer1`，使用命名格式 `<file>-<layer>` 将生成纹理 `example-Layer1.tres`。
+   - **旧资源处理**（仅 `ByLayer` 模式可用）：定义 PSD 文件修改后重新导入时如何处理不再属于 PSD 文件的资源，选项有：
+     - `Unlink` - 解除资源与 PSD 文件的关联，但保留在项目中，所有对资源的引用保持不变。
+     - `Delete` - 删除项目中的资源，所有对资源的引用将失效。
+   - **执行引用分析**（仅 `ByLayer` 模式可用）：启用后重新导入 PSD 文件时会分析生成的纹理资源的引用关系，输出有用的信息到输出面板。此功能用于了解 PSD 文件修改后项目中哪些部分受到影响，但会增加计算时间。
 5. 点击 `重新导入` 按钮应用设置。
 6. 导入的纹理会出现在与 PSD 文件相同目录下。
 
